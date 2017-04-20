@@ -1,0 +1,23 @@
+friendlyName: simple_request
+requestType: TimeAndSales
+instrument:
+  code: 7203.T
+date: '2016-04-12'
+timeRange:
+  start: '08:59'
+  end:   '09:05'
+messageTypeList:
+  messageType:
+    - name: Trade
+      fieldList:
+        string:
+          - Price
+          - Volume
+dateFormat: YYYYMMDD
+disableDataPersistence: true
+includeCurrentRIC: false
+requestInGMT: false
+displayInGMT: true
+disableHeader: false
+applyCorrections: false
+displayMicroseconds: true
