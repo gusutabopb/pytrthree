@@ -1,9 +1,10 @@
 import functools
 import logging
 import os
-import re
+import io
 
 import yaml
+import pandas as pd
 
 LOG_DIR = os.path.expanduser('~/plugaai/_logs')
 
@@ -40,3 +41,13 @@ def load_config(config_path):
         raise ValueError(f'Config keys missing: {config_keys - set(config.keys())}')
     else:
         return config
+
+def parse_request(resp):
+    if resp['result']['status'] != 'Complete':
+        logger.info(resp['result'])
+        return
+    df = pd.read_csv(io.BytesIO(resp['result']['data']), compression='gzip')
+    df.dropna(axis=1, how='all', inplace=True)  # Dropping all completely empty columns
+    return df
+
+
