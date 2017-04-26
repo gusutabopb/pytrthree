@@ -100,12 +100,39 @@ def test_ftp_request(api):
             time.sleep(5)
 
 
-def test_speed_guide():
-    pass
+def test_speed_guide(api):
+    r1 = api.get_page('THOMSONREUTERS', '2017-04-26', '12:00')
+    assert r1['page']['data']
+
+    r2 = api.get_snapshot_info()
+    page_time = datetime.datetime.strptime(r2['dateTime'], '%Y-%m-%d %H:%M:%S')
+    assert page_time < datetime.datetime.now()
+
+    r3 = api.search_page('EQUITY', 1)
+    assert len(r3['searchPageResults']['page'][0]['data']) > 1000
 
 
-def test_data_dictionary():
-    pass
+def test_data_dictionary(api):
+    assert api.get_asset_domains()
+    assert api.get_bond_types()
+    assert api.get_countries()
+    assert api.get_credit_ratings()
+
+    japan = api.factory.ArrayOfData([{'field': 'Country', 'value': 'Japan'}])
+    r = api.get_currencies(japan)
+    assert r['currencyList']['data'][0]['value'] == 'JPY'
+
+    domain = api.factory.ArrayOfData([{'field': 'Domain', 'value': 'COM'}])
+    r = api.get_exchanges(domain)
+    exchanges = [e['value'] for e in r['exchangeList']['data']]
+    assert 'CME' in exchanges
+    assert 'TYO' not in exchanges
+
+    assert api.get_futures_delivery_months()
+    assert api.get_option_expiry_months()
+    assert api.get_instrument_types(domain)
+    assert api.get_restricted_pes()
+    assert api.get_message_types(domain, 'TimeAndSales')
 
 
 def test_no_missing_functions(api):
