@@ -13,7 +13,7 @@ from . import utils
 logger = utils.make_logger(__name__)
 
 
-class TRTH(object):
+class TRTH:
     """A Pythonic wrapper for the TRTH API based on Zeep."""
 
     TRTH_VERSION = '5.8'
@@ -74,8 +74,8 @@ class TRTH(object):
             obj = getattr(self, attr)
             if isinstance(obj, functools.partial):
                 new_obj = functools.update_wrapper(obj, self._wrap)
-                func_name = obj.keywords['function']
-                new_obj.signature, new_obj.__doc__ = formatter(func_name)
+                func = obj.keywords['function']
+                new_obj.signature, new_obj.__doc__ = formatter(func)
                 setattr(self, attr, new_obj)
 
     def make_credentials(self):
@@ -84,7 +84,7 @@ class TRTH(object):
         and generates unique token used in subsequent API requests.
         """
         logger.info('Making credentials.')
-        credentials = self.factory.CredentialsHeader(**self.config['credentials'], tokenId='')
+        credentials = self.factory.CredentialsHeader(tokenId='', **self.config['credentials'])
         header = {'CredentialsHeader': credentials}
 
         # Dummy request to get tokenId
@@ -102,6 +102,8 @@ class TRTH(object):
         :param args: API function arguments
         :param kwargs: API function arguments
         """
+        # TODO: Improve automatic parameter parsing (i.e. reduce the need to use `api.factory`)
+        # TODO: Inject good defaults for non-critical non-important parameters
         if function is None:
             raise ValueError('API function not specified')
         if self.debug:

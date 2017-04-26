@@ -1,7 +1,6 @@
 import functools
 import datetime
 import time
-import os
 import subprocess
 
 import pytest
