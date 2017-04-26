@@ -1,0 +1,32 @@
+friendlyName: tas_trade_template
+requestType: TimeAndSales
+instrumentList:
+  instrument:
+    - code: 7202.T
+    - code: 7211.T
+dateRange:
+  start: '2016-04-01'
+  end:   '2016-04-05'
+timeRange:
+  start: '00:00'
+  end:   '23:59:59.999'
+messageTypeList:
+  messageType:
+    - name: Trade
+      fieldList:
+        string:
+          - Price
+          - Volume
+#          - Qualifiers
+requestInGMT: false
+displayInGMT: false
+marketDepth: null
+dateFormat: YYYYMMDD
+disableDataPersistence: false
+includeCurrentRIC: false
+applyCorrections: false
+displayMicroseconds: true
+splitSize: 500
+delivery: Push
+sortType: RICSequence
+fileFormat: Single

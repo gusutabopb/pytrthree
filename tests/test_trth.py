@@ -1,6 +1,8 @@
 import functools
 import datetime
 import time
+import os
+import subprocess
 
 import pytest
 import yaml
@@ -70,12 +72,32 @@ def test_direct_request(api):
     assert api.get_status()['status']['active'] == 0
 
 
-def test_http_request():
-    pass
+def test_ftp_request(api):
+    api.set_ftp_details(**api.config['ftp'])
+    api.test_ftp()
+    r = api.factory.LargeRequestSpec(**yaml.load(open('../templates/LargeRequestSpec.yml')))
+    rid1 = api.submit_ftp_request(r)
+    rid2 = api.submit_ftp_request(r)
+    sprint(rid1, rid2, sep='\n')
+    api.cancel_request(**rid2)
+    assert api.get_status()['status']['active'] == 1
+    assert api.get_request_result(**rid1)['result']['status'] == 'Processing'
+    assert api.get_request_result(**rid2)['result']['status'] == 'Aborted'
 
-
-def test_retrieve_data():
-    pass
+    # Test if rid1 has been properly downloaded
+    time.sleep(5)
+    req_id = rid1['requestID'].split('-')[-1]
+    for i in range(10):
+        cmd = api.config['ftp_ls_cmd']
+        dirlist = subprocess.check_output(cmd, shell=True).decode('utf-8').split('\n')
+        if any([req_id in fname for fname in dirlist]):
+            assert True
+            break
+        elif i == 9:
+            assert False
+        else:
+            print('sleeping')
+            time.sleep(5)
 
 
 def test_speed_guide():
