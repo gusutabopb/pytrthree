@@ -10,8 +10,6 @@ from zeep.helpers import serialize_object
 
 from . import utils
 
-logger = utils.make_logger(__name__)
-
 
 class TRTH:
     """A Pythonic wrapper for the TRTH API based on Zeep."""
@@ -21,15 +19,16 @@ class TRTH:
 
     def __init__(self, config=None):
         self.config = utils.load_config(config)
+        self.logger = utils.make_logger('pytrthree', self.config)
         self._debug = False
         self.plugin = DebugPlugin(self._debug)
         self.client = Client(self.TRTH_WSDL_URL, strict=True, plugins=[self.plugin])
         self.factory = self.client.type_factory('ns0')
         self.header = self.make_credentials()
-        self.signatures = self._parse_signatures(self.client)
+        self.signatures = self._parse_signatures()
         self._make_docstring()
         # self.client.set_default_soapheaders(self.header)
-        logger.info('TRTH API initialized.')
+        self.logger.info('TRTH API initialized.')
 
     @property
     def debug(self):
@@ -40,11 +39,10 @@ class TRTH:
         self._debug = value
         self.plugin.debug = value
 
-    @staticmethod
-    def _parse_signatures(client):
+    def _parse_signatures(self):
         """Parses API functions signature from WSDL document"""
         signatures = {}
-        for service in client.wsdl.services.values():
+        for service in self.client.wsdl.services.values():
             for port in service.ports.values():
                 for op in port.binding._operations.values():
                     input_sig = re.sub("{[^}]*}", '', op.input.body.signature())
@@ -83,7 +81,7 @@ class TRTH:
         Does initial authentication with the TRTH API
         and generates unique token used in subsequent API requests.
         """
-        logger.info('Making credentials.')
+        self.logger.info('Making credentials.')
         credentials = self.factory.CredentialsHeader(tokenId='', **self.config['credentials'])
         header = {'CredentialsHeader': credentials}
 
@@ -91,8 +89,8 @@ class TRTH:
         response = self.client.service.GetVersion(_soapheaders=header)
         header = {'CredentialsHeader': response.header.CredentialsHeader}
 
-        logger.info(f'Username: {response.header.CredentialsHeader.username}')
-        logger.info(f'Token ID: {response.header.CredentialsHeader.tokenId}')
+        self.logger.info(f'Username: {response.header.CredentialsHeader.username}')
+        self.logger.info(f'Token ID: {response.header.CredentialsHeader.tokenId}')
         return header
 
     def _wrap(self, *args, function=None, **kwargs) -> Callable[[Any], Optional[dict]]:
@@ -116,7 +114,7 @@ class TRTH:
             if self.debug:
                 raise fault
             else:
-                logger.error(fault)
+                self.logger.error(fault)
 
     # # Quota and permissions
     get_look_back_period = pm(_wrap, function='GetLookBackPeriod')

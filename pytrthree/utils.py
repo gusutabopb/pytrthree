@@ -6,17 +6,17 @@ import io
 import yaml
 import pandas as pd
 
-LOG_DIR = os.path.expanduser('~/plugaai/_logs')
+logger = logging.getLogger('pytrthree')
 
 
-def make_logger(name, fname=None) -> logging.Logger:
-    if fname is None:
-        if not os.path.exists(LOG_DIR):
-            os.makedirs(LOG_DIR)
-        fname = os.path.join(LOG_DIR, f'{name}.log')
+def make_logger(name, config) -> logging.Logger:
+    if not os.path.exists(config['log']):
+        os.makedirs(config['log'])
+    fname = os.path.join(config['log'], f'{name}.log')
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s')
+    formatter = logging.Formatter(fmt='{asctime} | {name} | {levelname}: {message}',
+                                  datefmt='%Y-%m-%d %H:%M:%S', style='{')
 
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
@@ -29,9 +29,6 @@ def make_logger(name, fname=None) -> logging.Logger:
     logger.addHandler(stream_handler)
 
     return logger
-
-
-logger = make_logger(__name__)
 
 
 def load_config(config_path):
