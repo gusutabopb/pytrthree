@@ -7,17 +7,8 @@ import pytest
 import yaml
 from zeep.exceptions import Fault
 
-from pytrthree import TRTH, utils
 
 sprint = functools.partial(print, end='\n=====\n')
-
-
-@pytest.fixture(scope="module")
-def api():
-    api = TRTH(config='~/plugaai/pytrthree/config_toba.yml')
-    api.debug = True
-    assert api.debug
-    yield api
 
 
 def test_permissions(api):
@@ -29,24 +20,18 @@ def test_permissions(api):
 
 
 def test_instrument_details(api):
-    now = datetime.datetime.utcnow()
+    resp = api.expand_chain('0#.N225', requestInGMT=True)
+    assert len(resp) == 226
+
     long_daterange = dict(start=datetime.datetime(1996, 1, 1), end=datetime.datetime(2017, 1, 1))
-    short_daterange = dict(start=now - datetime.timedelta(days=1), end=now)
-    time_range = dict(start='00:00', end='23:59')
-    criteria = api.factory.ArrayOfData([{'field': 'Exchange', 'value': 'TYO'},
-                                        {'field': 'RICRegex', 'value': '^720[0-9]{1}\.T$'}])
-    instrument_list = api.factory.ArrayOfInstrument([{'code': '7203.T'}])
+    resp = api.get_ric_symbology('RIO.AX', long_daterange)
+    assert resp
 
-    resp = api.expand_chain({'code': '0#.N225'}, short_daterange, time_range, requestInGMT=True)
-    assert len(resp['instrumentList']['instrument']) == 226
+    criteria = dict(Exchange='TYO', RICRegex='^720[0-9]{1}\.T$')
+    resp = api.search_rics(criteria=criteria, refData=True)
+    assert resp[0]['code'] == '7201.T'
 
-    resp = api.get_ric_symbology({'code': 'RIO.AX'}, long_daterange)
-    assert resp['instrumentList']
-
-    resp = api.search_rics(short_daterange, criteria, refData=True)
-    assert resp['SearchRICsResult']['instrument'][0]['code'] == '7201.T'
-
-    resp = api.verify_rics(short_daterange, instrument_list, refData=True)
+    resp = api.verify_rics(instrumentList=['7203.T'], refData=True)
     assert resp['verifyRICsResult']['nonVerifiedList'] is None
     assert resp['verifyRICsResult']['verifiedList']['instrument'][0]['name']['string'][0] == 'TOYOTA MOTOR CO'
 
@@ -59,8 +44,7 @@ def test_direct_request(api):
             time.sleep(3)
             continue
         else:
-            resp = api.get_request_result(**rid)
-            df = utils.parse_request(resp)
+            df = api.get_request_result(**rid)
             break
     print(df)
     assert not df.empty
@@ -117,13 +101,12 @@ def test_data_dictionary(api):
     assert api.get_countries()
     assert api.get_credit_ratings()
 
-    japan = api.factory.ArrayOfData([{'field': 'Country', 'value': 'Japan'}])
-    r = api.get_currencies(japan)
-    assert r['currencyList']['data'][0]['value'] == 'JPY'
+    r = api.get_currencies(dict(Country='Japan'))
+    assert r[0]['value'] == 'JPY'
 
-    domain = api.factory.ArrayOfData([{'field': 'Domain', 'value': 'COM'}])
+    domain = dict(Domain='COM')
     r = api.get_exchanges(domain)
-    exchanges = [e['value'] for e in r['exchangeList']['data']]
+    exchanges = [e['value'] for e in r]
     assert 'CME' in exchanges
     assert 'TYO' not in exchanges
 

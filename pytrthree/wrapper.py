@@ -1,7 +1,8 @@
 import re
 import functools
+from collections import OrderedDict
 from functools import partialmethod as pm
-from typing import Any, Callable, Optional
+from typing import Optional
 
 from lxml import etree
 from zeep import Client, Plugin
@@ -28,7 +29,7 @@ class TRTH:
         self.header = self.make_credentials()
         self.signatures = self._parse_signatures()
         self._make_docstring()
-        # self.client.set_default_soapheaders(self.header)
+        self.client.set_default_soapheaders(self.header)
         self.logger.info('TRTH API initialized.')
 
     def __getattr__(self, item):
@@ -91,28 +92,88 @@ class TRTH:
         self.logger.info(f'Token ID: {response.header.CredentialsHeader.tokenId}')
         return header
 
-    def _wrap(self, *args, function=None, **kwargs) -> Callable[[Any], Optional[dict]]:
+    def _wrap(self, *args, function=None, **kwargs) -> Optional[dict]:
         """
-        Wrapper for TRTH API functions. For function signature see show_signature.
+        Wrapper for TRTH API functions.
         :param function: Wrapped TRTH API function string name
         :param args: API function arguments
         :param kwargs: API function arguments
         """
-        # TODO: Improve automatic parameter parsing (i.e. reduce the need to use `api.factory`)
-        # TODO: Inject good defaults for non-critical non-important parameters
         if function is None:
             raise ValueError('API function not specified')
         if self.debug:
             print(self.signatures[function])
-        f = getattr(self.client.service, function)
+        input_type, output_type = self.signatures[function]
+        params = self._parse_params(args, kwargs, input_type)
         try:
-            resp = f(_soapheaders=self.header, *args, **kwargs)
-            return serialize_object(resp.body, target_cls=dict)
+            f = getattr(self.client.service, function)
+            resp = f(**params)
+            return self._parse_response(resp, output_type)
         except Fault as fault:
             if self.debug:
                 raise fault
             else:
                 self.logger.error(fault)
+
+    def _parse_params(self, args, kwargs, input_type):
+        """
+        Uses util parser functions so that the user doesn't have to manually instanciate
+        `self.factory` classes. Also provides reasonable default values for some types.
+        Can be disabled by editing `self.options`.
+        :param args: API function arguments passed by the user
+        :param kwargs: API function arguments passed by the user
+        :param input_type: API function input signataure
+        :return: Parsed/filled function input parameter dictionary
+        """
+
+        # Parsing args and kwargs into an OrderedDict
+        params = re.findall('(\w+): (\w*:?\w+)', input_type)
+        params = OrderedDict([(name, [typ, None]) for name, typ in params])
+        for name, value in zip(params, args):
+            params[name][1] = value
+        for name, value in kwargs.items():
+            params[name][1] = value
+
+        print(params)
+
+        # Calling parser functions for each data type
+        if self.input_parser:
+            for name, (typ, value) in params.items():
+                try:
+                    parser = getattr(utils, f'make_{typ}')
+                    self.logger.info(f'Using {parser}')
+                    params[name][1] = parser(value, self.factory)
+                except AttributeError:
+                    pass
+
+        print(params)
+
+        return {k: v[1] for k, v in params.items()}
+
+    def _parse_response(self, resp, output_type):
+        """
+        Uses util parser functions in order to return response in a
+        less verbose and more more user-friendly format.
+        Can be disabled/customized by editing `self.options`.
+        :param resp: Zeep response object
+        :param output_type: API function output signataure
+        :return: Parsed dictionary/DataFrameresponse
+        """
+        output_type = output_type.split(': ')[-1]
+        if self.target_cls is None:
+            return resp
+        else:
+            resp = serialize_object(resp.body, target_cls=self.target_cls)
+
+        # Calling parser functions for data type
+        if self.output_parser:
+            try:
+                parser = getattr(utils, f'parse_{output_type}')
+                self.logger.info(f'Using {parser}')
+                resp = parser(resp)
+            except AttributeError:
+                pass
+        return resp
 
     # # Quota and permissions
     get_look_back_period = pm(_wrap, function='GetLookBackPeriod')
