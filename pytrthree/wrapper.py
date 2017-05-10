@@ -20,8 +20,9 @@ class TRTH:
     def __init__(self, config=None):
         self.config = utils.load_config(config)
         self.logger = utils.make_logger('pytrthree', self.config)
-        self._debug = False
-        self.plugin = DebugPlugin(self._debug)
+        self.options = dict(debug=False, target_cls=dict,
+                            input_parser=True, output_parser=True)
+        self.plugin = DebugPlugin(self)
         self.client = Client(self.TRTH_WSDL_URL, strict=True, plugins=[self.plugin])
         self.factory = self.client.type_factory('ns0')
         self.header = self.make_credentials()
@@ -30,14 +31,11 @@ class TRTH:
         # self.client.set_default_soapheaders(self.header)
         self.logger.info('TRTH API initialized.')
 
-    @property
-    def debug(self):
-        return self._debug
-
-    @debug.setter
-    def debug(self, value):
-        self._debug = value
-        self.plugin.debug = value
+    def __getattr__(self, item):
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            return self.options[item]
 
     def _parse_signatures(self):
         """Parses API functions signature from WSDL document"""
@@ -163,18 +161,18 @@ class TRTH:
 
 
 class DebugPlugin(Plugin):
-    def __init__(self, debug):
-        self.debug = debug
+    def __init__(self, parent):
+        self.parent = parent
 
     def egress(self, envelope, http_headers, operation, binding_options):
-        if self.debug:
+        if self.parent.debug:
             print(operation)
             print(http_headers)
             print(etree.tostring(envelope, pretty_print=True).decode('utf-8'))
         return envelope, http_headers
 
     def ingress(self, envelope, http_headers, operation):
-        if self.debug:
+        if self.parent.debug:
             print(operation)
             print(http_headers)
             print(etree.tostring(envelope, pretty_print=True).decode('utf-8'))
