@@ -65,7 +65,7 @@ class TRTH:
             ret = f'{indent}:return: {output_sig}'
             docstring = '\n'.join([signature, reference, params, ret])
             docstring = re.sub(r'\n\s*\n', '\n', docstring)
-            return signature, docstring
+            return lambda: print(signature.strip()), docstring
 
         for attr in dir(self):
             obj = getattr(self, attr)

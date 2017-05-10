@@ -23,7 +23,7 @@ setup(name='pytrthree',
       url='https://github.com/plugaai/pytrthree',
       packages=['pytrthree'],
       license='GPL',
-      install_requires=['zeep', 'pytest'],
+      install_requires=['python-zeep', 'pytest', 'pandas', 'pyyaml'],
       classifiers=[
           'Intended Audience :: Developers',
           'Intended Audience :: Science/Research',
