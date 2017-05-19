@@ -1,0 +1,14 @@
+---
+TYO_eq:
+  ric:
+    Exchange: TYO
+    RICRegex: '^[0-9]{4}\.T$'
+OSA_eqoptions:
+  ric:
+    Exchange: OSA
+    RICRegex: '^J\w*[0-9]\.OS$'
+    InstrumentType: 115
+  fields:
+    - Price
+    - Volume
+    - Implied Volatility
