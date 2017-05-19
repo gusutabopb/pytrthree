@@ -14,7 +14,7 @@ and 2) taking care of the generation of custom XML objects.
 It is assumed the user has some basic knowledge of the TRTH service and has a **valid subscription**. The official TRTH API User Guide can be found [here](https://tickhistory.thomsonreuters.com/data/results/RDTH.sample@reuters.com/TRTH_API_User_Guide_v5_8.pdf) (login required).
 
 
-## Usage
+## Getting started
 
 #### Authentication
 In order to authenticate with the API, you need to make a YAML configuration file as the following:
@@ -60,14 +60,14 @@ Pytrthree adds some extra functionality on top of Zeep in order to parse standar
 
 #### Requesting instrument data
 
-TRTH instrument data request objects are parsed from YAML files:
+In the TRTH API, there are two data types for instrument data requests, `RequestSpec` and `LargeRequestSpec`. The former is used for direct, single-RIC requests, while the later is used for HTTP/FTP requests. Both request type objects can be parsed from YAML files. Here is a sample `RequestSpec`: 
 
 ```yaml
 friendlyName: simple_request
 requestType: TimeAndSales
 instrument:
   code: 7203.T
-date: 2016-04-12
+date: '2016-04-12'
 timeRange:
   start: 08:59
   end: 09:05
@@ -88,18 +88,10 @@ applyCorrections: false
 displayMicroseconds: true
 ```
 
-We recommend users start off one of the templates provided in the `templates` folder and modify it according to their needs. To send simple direct request:
+You can submit a `RequestSpec` request by passing a template file path to `submit_request`:
 
 ```python
-import yaml
-req_obj = api.factory.RequestSpec(**yaml.load(open('templates/RequestSpec.yml')))
-req_id = api.submit_request(req_dict)
-```
-
-Here, `req_obj` is a dictionary-like object. To change the instrument, simply try:
-
-```python
-req_obj['instrument']['code'] = '9984.T'
+req_id = api.submit_request('templates/RequestSpec.yml')
 ```
 
 `req_id` contains the request ID:
@@ -107,6 +99,15 @@ req_obj['instrument']['code'] = '9984.T'
 ```python
 >>> req_id
 {'requestID': 'yourusername@thomsonreuters.com-simple_request-N146877655'}
+```
+
+Instead of using a template directly, users can also use the object generation factory to programatically make a request object. We recommend users start off one of the templates provided in the `templates` folder and modify it according to their needs. For example, in order to change the instrument of the template above and resend the request:
+
+```python
+import yaml
+req_obj = api.factory.RequestSpec(**yaml.load(open('templates/RequestSpec.yml')))
+req_obj['instrument']['code'] = '9984.T'
+req_id = api.submit_request('templates/RequestSpec.yml')
 ```
 
 To retrieve your request result:
@@ -122,7 +123,11 @@ To retrieve your request result:
 5    9984.T  20160412  00:00:02.172187           9  Trade   5663     300
 ...
 
-```
+``` 
+
+
+## Retrieving data from FTP/HTTP requests 
+
 
 
 
