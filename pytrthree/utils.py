@@ -5,6 +5,7 @@ import io
 
 import yaml
 import pandas as pd
+from zeep.xsd.valueobjects import CompoundValue
 
 logger = logging.getLogger('pytrthree')
 
@@ -56,8 +57,8 @@ def base_parser(resp):
         return resp
 
 
-def parse_ArrayOfData(resp):
-    return base_parser(resp)
+parse_ArrayOfData = base_parser
+parse_ArrayOfMessageType = base_parser
 
 
 def parse_ArrayOfInstrument(resp):
@@ -88,7 +89,10 @@ def make_ArrayOfInstrument(param, factory):
 
 
 def make_Instrument(param, factory):
-    return factory.Instrument(code=param)
+    if isinstance(param, str):
+        return factory.Instrument(code=param)
+    else:
+        return param
 
 
 def make_DateRange(param, factory):
@@ -106,6 +110,20 @@ def make_TimeRange(param, factory):
         return dict(start='00:00', end='23:59')
     else:
         return param
+
+
+def make_RequestSpec(param, factory):
+    if isinstance(param, CompoundValue):
+        return param
+    else:
+        return factory.RequestSpec(**yaml.load(open(param)))
+
+
+def make_LargeRequestSpec(param, factory):
+    if isinstance(param, CompoundValue):
+        return param
+    else:
+        return factory.LargeRequestSpec(**yaml.load(open(param)))
 
 
 def parse_RequestResult(resp):
