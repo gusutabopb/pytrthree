@@ -10,9 +10,10 @@ logger = logging.getLogger('pytrthree')
 
 
 def make_logger(name, config) -> logging.Logger:
-    if not os.path.exists(config['log']):
-        os.makedirs(config['log'])
-    fname = os.path.join(config['log'], f'{name}.log')
+    log_path = os.path.expanduser(config['log'])
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+    fname = os.path.join(log_path, f'{name}.log')
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(fmt='{asctime} | {name} | {levelname}: {message}',
