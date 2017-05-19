@@ -33,7 +33,11 @@ def make_logger(name, config) -> logging.Logger:
 
 
 def load_config(config_path):
-    config = yaml.load(open(os.path.expanduser(config_path)))
+    if isinstance(config_path, io.IOBase):
+        file = config_path
+    else:
+        file = open(os.path.expanduser(config_path))
+    config = yaml.load(file)
     config_keys = {'credentials'}
     if config_keys - set(config.keys()):
         raise ValueError(f'Config keys missing: {config_keys - set(config.keys())}')
