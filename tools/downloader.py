@@ -16,31 +16,44 @@ TRTH_HTTP_DWLD = 'https://tickhistory.thomsonreuters.com/HttpPull/Download'
 
 class Downloader:
 
-    def __init__(self, config):
-        api = TRTH(config=config)
-        self.credentials = {'user': api.config['credentials']['username'],
-                            'pass': api.config['credentials']['password']}
+    def __init__(self, args):
+        self.args = args
+        self.api = TRTH(config=args.config)
+        self.credentials = {'user': self.api.config['credentials']['username'],
+                            'pass': self.api.config['credentials']['password']}
         self.results = self.list_results()
-        z = zip(self.results['name'].apply(self.parse_fname2), self.results['size'])
+        z = zip(self.results['name'].apply(self.parse_fname), self.results['size'])
         self.progress = {fname: dict(downloaded=0, total=total, state=None) for fname, total in z}
+        self.requests = {group: data['name'].apply(self.parse_fname).tolist()
+                         for group, data in self.results.groupby('id')}
         self.loop = asyncio.get_event_loop()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.add_job(self.print_progress, 'interval', seconds=5)
+        self.semaphore = asyncio.Semaphore(args.max)
+
+    def start(self):
+        files = [f for f in self.results['name'] if re.search(args.regex, f)]
+        file_list = '\n'.join([f.split('/')[-1] for f in files])
+        self.api.logger.info(f'Downloading {len(files)} files:\n{file_list}')
+        if not self.args.dryrun:
+            fut = asyncio.gather(*[self.download(f) for f in files])
+            self.scheduler.start()
+            self.loop.run_until_complete(fut)
 
     @staticmethod
     def parse_fname(x):
-        return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]
+        return '-'.join(x.split('-')[2:])
 
     @staticmethod
-    def parse_fname2(x):
-        return '-'.join(x.split('-')[2:])
+    def parse_rid_type(x):
+        return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]
 
     def list_results(self):
         params = {'dir': '/api-results', 'mode': 'csv', **self.credentials}
         r = requests.get(TRTH_HTTP_LIST, params=params)
         df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
         df.columns = ['type', 'name', 'size', 'date']
-        types = df['name'].apply(self.parse_fname).apply(pd.Series)
+        types = df['name'].apply(self.parse_rid_type).apply(pd.Series)
         df['id'] = types[0]
         df['type'] = types[1].replace('', 'part000')
         return df
@@ -48,35 +61,61 @@ class Downloader:
     async def download(self, file):
         async with aiohttp.ClientSession() as session:
             params = {'file': file, **self.credentials}
-            async with session.get(TRTH_HTTP_DWLD, params=params, timeout=None) as resp:
+            async with self.semaphore, session.get(TRTH_HTTP_DWLD, params=params, timeout=None) as resp:
                 await self.save_stream(resp, file)
 
     async def save_stream(self, resp, file):
-        filename = self.parse_fname2(file)
-        print(f'Downloading {filename}')
+        filename = self.parse_fname(file)
+        self.api.logger.info(f'Downloading {filename}')
         self.progress[filename]['state'] = 'D'
         with open(filename, 'wb') as f:
             while True:
                 chunk = await resp.content.read(256*1024)
                 self.progress[filename]['downloaded'] += len(chunk)
                 if not chunk:
-                    self.progress[filename]['downloaded'] = self.progress[filename]['size']
-                    self.progress[filename]['state'] += 'C'
-                    print(f'Finished downloading {filename}')
                     break
                 f.write(chunk)
+        self.progress[filename]['downloaded'] = self.progress[filename]['total']
+        self.progress[filename]['state'] = 'C'
+        self.api.logger.info(f'Finished downloading {filename}')
+        if self.args.cancel:
+            self.maybe_cancel_request(filename)
+
+    def maybe_cancel_request(self, filename):
+        rid = self.parse_rid_type(filename)[0]
+        completed = [self.progress[fname]['state'] == 'C' for fname in self.requests[rid]]
+        report = [self.parse_rid_type(fname)[1] == 'report' for fname in self.requests[rid]]
+        # print(completed)
+        # print(report)
+        if all(completed) and any(report):
+            self.api.logger.info(f'Canceling {rid}')
+            # self.api.cancel_request()
+            # api.cancel
 
     def print_progress(self):
+        completed = 0
         for fname, progress in self.progress.items():
-            if progress['state']:
+            if progress['state'] == 'D':
                 pct = progress['downloaded'] / progress['total']
-                print(f'{fname}: {pct:.1%}')
+                self.api.logger.info(f'{fname}: {pct:.1%}')
+            elif progress['state'] == 'C':
+                completed +=1
+        if completed:
+            self.api.logger.info(f'Completed: {completed}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download TRTH files from HTTP.')
-    parser.add_argument('--config', action='store', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--config', action='store', type=argparse.FileType('r'), required=True,
+                        help='TRTH API configuration (YAML file)')
+    parser.add_argument('--max', action='store', type=int, default=10,
+                        help='Maximum number of concurrent downloads. Default: 10.')
+    parser.add_argument('--regex', action='store', type=str, default='.*',
+                        help='Option regular expression to filter which files to download.')
+    parser.add_argument('--cancel', action='store_true',
+                        help='Whether or not to cancel requests after all parts have been downloaded.')
+    parser.add_argument('--dryrun', action='store_true',
+                        help='Whether or not to cancel requests after all parts have been downloaded.')
     args = parser.parse_args()
-    downloader = Downloader(args.config)
-    fut = asyncio.gather(*[downloader.download(f) for f in downloader.results['name'][:3]])
-    downloader.scheduler.start()
-    downloader.loop.run_until_complete(fut)
+    downloader = Downloader(args)
+    downloader.start()
