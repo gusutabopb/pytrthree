@@ -18,7 +18,6 @@ messageTypeList:
         string:
           - Price
           - Volume
-#          - Qualifiers
 requestInGMT: false
 displayInGMT: false
 marketDepth: null

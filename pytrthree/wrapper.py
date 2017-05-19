@@ -134,19 +134,14 @@ class TRTH:
         for name, value in kwargs.items():
             params[name][1] = value
 
-        print(params)
-
         # Calling parser functions for each data type
         if self.input_parser:
             for name, (typ, value) in params.items():
                 try:
                     parser = getattr(utils, f'make_{typ}')
-                    self.logger.info(f'Using {parser}')
                     params[name][1] = parser(value, self.factory)
                 except AttributeError:
                     pass
-
-        print(params)
 
         return {k: v[1] for k, v in params.items()}
 
@@ -169,7 +164,6 @@ class TRTH:
         if self.output_parser:
             try:
                 parser = getattr(utils, f'parse_{output_type}')
-                self.logger.info(f'Using {parser}')
                 resp = parser(resp)
             except AttributeError:
                 pass

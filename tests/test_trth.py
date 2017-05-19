@@ -4,7 +4,6 @@ import time
 import subprocess
 
 import pytest
-import yaml
 from zeep.exceptions import Fault
 
 
@@ -37,7 +36,7 @@ def test_instrument_details(api):
 
 
 def test_direct_request(api):
-    r = api.factory.RequestSpec(**yaml.load(open('../templates/RequestSpec.yml')))
+    r = '../templates/RequestSpec.yml'
     rid = api.submit_request(r)
     while True:
         if api.get_status()['status']['active']:
@@ -58,7 +57,7 @@ def test_direct_request(api):
 def test_ftp_request(api):
     api.set_ftp_details(**api.config['ftp'])
     api.test_ftp()
-    r = api.factory.LargeRequestSpec(**yaml.load(open('../templates/LargeRequestSpec.yml')))
+    r = '../templates/LargeRequestSpec.yml'
     rid1 = api.submit_ftp_request(r)
     rid2 = api.submit_ftp_request(r)
     sprint(rid1, rid2, sep='\n')
