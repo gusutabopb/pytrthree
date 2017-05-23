@@ -14,7 +14,6 @@ def make_request(daterange, criteria):
     request['friendlyName'] = '{}-{}_{}'.format(name, *short_dates)
     request['instrumentList']['instrument'] = ric_list
     request['dateRange'] = daterange
-    request['delivery'] = 'Pull'
     if 'fields' in crit:
         request['messageTypeList']['messageType'][0]['fieldList']['string'] = crit['fields']
     return request
@@ -36,7 +35,7 @@ if __name__ == '__main__':
                         help='Start date (ISO-8601 datetime string)')
     parser.add_argument('--end', action='store', type=str, default=str(datetime.datetime.now().date()),
                         help='End date (ISO-8601 datetime string). Default to today\'s date.')
-    parser.add_argument('--group', action='store', type=str, default='3M',
+    parser.add_argument('--group', action='store', type=str, default='1A',
                         help='Pandas datetime frequency string for grouping requests. Defaults to "3M".')
     args = parser.parse_args()
 
