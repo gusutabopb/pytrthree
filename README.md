@@ -8,11 +8,21 @@ and 2) taking care of the generation of custom XML objects.
 
 
 #### Naming
-[brotchie](https://github.com/brotchie) made the original [`pytrth`](https://github.com/brotchie/pytrth) library and [Continuum Analytics](https://www.continuum.io/) [fork](https://github.com/ContinuumIO/pytrth) gave continuation to the project. As of 2017, both projects are stale. Pytr**three** aims to be the **third** incarnation of a Python wrapper for TRTH, and provides Python **3** support ONLY (because it is 2017).
+[brotchie](https://github.com/brotchie) made the original [`pytrth`](https://github.com/brotchie/pytrth) 
+library and [Continuum Analytics](https://www.continuum.io/) [fork](https://github.com/ContinuumIO/pytrth) 
+gave continuation to the project. 
+As of 2017, both projects are stale. 
+Pytr**three** aims to be the **third** incarnation of a Python wrapper for TRTH, 
+and provides Python **3** support ONLY (because it is 2017).
 
 #### Requirements
 It is assumed the user has some basic knowledge of the TRTH service and has a **valid subscription**. The official TRTH API User Guide can be found [here](https://tickhistory.thomsonreuters.com/data/results/RDTH.sample@reuters.com/TRTH_API_User_Guide_v5_8.pdf) (login required).
 
+## Instalation:
+
+```bash
+$ pip install git+https://github.com/plugaai/pytrthree
+```
 
 ## Getting started
 
