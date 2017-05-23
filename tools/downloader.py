@@ -7,7 +7,7 @@ import re
 import aiohttp
 import pandas as pd
 import requests
-from pytrthree import TRTH
+import pytrthree
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 TRTH_HTTP_LIST = 'http://tickhistory.thomsonreuters.com/HttpPull/List'
@@ -18,7 +18,7 @@ class Downloader:
 
     def __init__(self, args):
         self.args = args
-        self.api = TRTH(config=args.config)
+        self.api = pytrthree.TRTH(config=args.config)
         self.credentials = {'user': self.api.config['credentials']['username'],
                             'pass': self.api.config['credentials']['password']}
         self.results = self.list_results()
@@ -44,16 +44,12 @@ class Downloader:
     def parse_fname(x):
         return '-'.join(x.split('-')[2:])
 
-    @staticmethod
-    def parse_rid_type(x):
-        return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]
-
     def list_results(self):
         params = {'dir': '/api-results', 'mode': 'csv', **self.credentials}
         r = requests.get(TRTH_HTTP_LIST, params=params)
         df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
         df.columns = ['type', 'name', 'size', 'date']
-        types = df['name'].apply(self.parse_rid_type).apply(pd.Series)
+        types = df['name'].apply(pytrthree.utils.parse_rid_type).apply(pd.Series)
         df['id'] = types[0]
         df['type'] = types[1].replace('', 'part000')
         return df
@@ -82,9 +78,9 @@ class Downloader:
             self.maybe_cancel_request(filename)
 
     def maybe_cancel_request(self, filename):
-        rid = self.parse_rid_type(filename)[0]
+        rid = pytrthree.utils.parse_rid_type(filename)[0]
         completed = [self.progress[fname]['state'] == 'C' for fname in self.requests[rid]]
-        report = [self.parse_rid_type(fname)[1] == 'report' for fname in self.requests[rid]]
+        report = [pytrthree.utils.parse_rid_type(fname)[1] == 'report' for fname in self.requests[rid]]
         # print(completed)
         # print(report)
         if all(completed) and any(report):
@@ -115,7 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--cancel', action='store_true',
                         help='Whether or not to cancel requests after all parts have been downloaded.')
     parser.add_argument('--dryrun', action='store_true',
-                        help='Whether or not to cancel requests after all parts have been downloaded.')
+                        help='Dry run mode. Use this to test which files will be downloaded.')
     args = parser.parse_args()
     downloader = Downloader(args)
     downloader.start()

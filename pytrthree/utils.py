@@ -1,10 +1,11 @@
 import datetime
+import io
 import logging
 import os
-import io
+import re
 
-import yaml
 import pandas as pd
+import yaml
 from zeep.xsd.valueobjects import CompoundValue
 
 logger = logging.getLogger('pytrthree')
@@ -138,3 +139,6 @@ def parse_RequestResult(resp):
 
 output_parsers = [parse_RequestResult, parse_ArrayOfData, parse_ArrayOfInstrument]
 input_parsers = [make_ArrayOfData, make_ArrayOfInstrument, make_DateRange, make_TimeRange]
+
+def parse_rid_type(x):
+    return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]

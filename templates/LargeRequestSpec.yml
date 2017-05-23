@@ -18,8 +18,8 @@ messageTypeList:
         string:
           - Price
           - Volume
-requestInGMT: false
-displayInGMT: false
+requestInGMT: true
+displayInGMT: true
 marketDepth: null
 dateFormat: YYYYMMDD
 disableDataPersistence: false
