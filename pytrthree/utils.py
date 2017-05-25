@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+from zeep.exceptions import Fault
 
 import pandas as pd
 import yaml
@@ -147,7 +148,7 @@ def parse_rid_type(x):
     return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]
 
 
-def retry(func, *args, n=sys.maxsize, sleep=3, exp_base=1, **kwargs):
+def retry(func, *args, n=sys.maxsize, sleep=3, exp_base=1, exception_cls=Fault, **kwargs):
     """
     Retries calling wrapee function `n` times,
     waiting `sleep * exp_base ** trial` between each trial.
@@ -171,7 +172,7 @@ def retry(func, *args, n=sys.maxsize, sleep=3, exp_base=1, **kwargs):
         for trial in range(n):
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except exception_cls as e:
                 retry_processing(trial, e, args, kwargs)
         return wrapper
 
