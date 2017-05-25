@@ -5,6 +5,7 @@ import datetime
 import pandas as pd
 import yaml
 from pytrthree import TRTH
+from pytrthree.utils import retry
 
 
 def make_request(daterange, criteria):
@@ -37,10 +38,11 @@ if __name__ == '__main__':
     parser.add_argument('--end', action='store', type=str, default=str(datetime.datetime.now().date()),
                         help='End date (ISO-8601 datetime string). Default to today\'s date.')
     parser.add_argument('--group', action='store', type=str, default='1A',
-                        help='Pandas datetime frequency string for grouping requests. Defaults to "3M".')
+                        help='Pandas datetime frequency string for grouping requests. Defaults to "1A".')
     args = parser.parse_args()
 
     api = TRTH(config=args.config)
+    api.options['raise_exception'] = True
     criteria = yaml.load(args.criteria)
     template = yaml.load(args.template)
 
@@ -49,6 +51,6 @@ if __name__ == '__main__':
     for daterange in dateranges:
         for name, crit in criteria.items():
             request = make_request(daterange, crit)
-            rid = api.submit_ftp_request(request)
+            rid = retry(api.submit_ftp_request, request, sleep=30, exp_base=2)
             api.logger.info(rid['requestID'])
     api.logger.info('All requests sent!')

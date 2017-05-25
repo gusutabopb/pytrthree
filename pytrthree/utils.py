@@ -3,6 +3,9 @@ import io
 import logging
 import os
 import re
+import sys
+import time
+from zeep.exceptions import Fault
 
 import pandas as pd
 import yaml
@@ -140,5 +143,37 @@ def parse_RequestResult(resp):
 output_parsers = [parse_RequestResult, parse_ArrayOfData, parse_ArrayOfInstrument]
 input_parsers = [make_ArrayOfData, make_ArrayOfInstrument, make_DateRange, make_TimeRange]
 
+
 def parse_rid_type(x):
     return re.findall('-(N\d{9})-?(\w*)\.(?:csv|txt)', x)[0]
+
+
+def retry(func, *args, n=sys.maxsize, sleep=3, exp_base=1, exception_cls=Fault, **kwargs):
+    """
+    Retries calling wrapee function `n` times,
+    waiting `sleep * exp_base ** trial` between each trial.
+    Can be used as exception logger with n=1.
+
+    :param func: Wrapee function
+    :param n: Maximum number of retries allowed. Defaults to 2^63 - 1.
+    :param sleep: Multiplier of the exponential delayer
+    :param exp_base: Base of the exponential delayer. Defaults to 1 (=constant delay).
+    """
+
+    def retry_processing(trial, e, args, kwargs):
+        if trial < n - 1:
+            delay = sleep * exp_base ** trial
+            logger.info(f'Retrying in {delay} seconds (#{trial+1})...')
+            time.sleep(delay)
+        else:
+            raise e
+
+    def wrapper(func, *args, **kwargs):
+        for trial in range(n):
+            try:
+                return func(*args, **kwargs)
+            except exception_cls as e:
+                retry_processing(trial, e, args, kwargs)
+        return wrapper
+
+    return wrapper(func, *args, **kwargs)

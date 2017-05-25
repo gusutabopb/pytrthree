@@ -21,7 +21,7 @@ class TRTH:
     def __init__(self, config=None):
         self.config = utils.load_config(config)
         self.logger = utils.make_logger('pytrthree', self.config)
-        self.options = dict(debug=False, target_cls=dict,
+        self.options = dict(debug=False, target_cls=dict, raise_exception=False,
                             input_parser=True, output_parser=True)
         self.plugin = DebugPlugin(self)
         self.client = Client(self.TRTH_WSDL_URL, strict=True, plugins=[self.plugin])
@@ -110,7 +110,7 @@ class TRTH:
             resp = f(**params)
             return self._parse_response(resp, output_type)
         except Fault as fault:
-            if self.debug:
+            if self.raise_exception:
                 raise fault
             else:
                 self.logger.error(fault)
