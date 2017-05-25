@@ -10,12 +10,13 @@ from pytrthree import TRTH
 def make_request(daterange, criteria):
     request = api.factory.LargeRequestSpec(**template)
     short_dates = sorted([x.replace('-', '') for x in daterange.values()])
-    ric_list = [{'code': i['code']} for i in api.search_rics(daterange, criteria['ric'], refData=False)]
+    search_result = api.search_rics(daterange, criteria['ric'], refData=False)
+    ric_list = [{'code': i['code']} for i in search_result]
     request['friendlyName'] = '{}-{}_{}'.format(name, *short_dates)
     request['instrumentList']['instrument'] = ric_list
     request['dateRange'] = daterange
-    if 'fields' in crit:
-        request['messageTypeList']['messageType'][0]['fieldList']['string'] = crit['fields']
+    if 'fields' in criteria:
+        request['messageTypeList']['messageType'][0]['fieldList']['string'] = criteria['fields']
     return request
 
 
