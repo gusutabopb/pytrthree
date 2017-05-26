@@ -20,9 +20,13 @@ class TRTHIterator:
     def __init__(self, files, chunksize=10 ** 6):
         self.files = self._validate_input(files)
         self.chunksize = chunksize
+        self.iter = self.make_next()
 
     def __iter__(self):
-        return self.make_next()
+        return self
+
+    def __next__(self):
+        return next(self.iter)
 
     @staticmethod
     def _validate_input(files: Union[TRTHFile, Sequence[TRTHFile]]) -> Sequence[TRTHFile]:
