@@ -1,10 +1,15 @@
+import io
 import re
-from typing import Sequence
+from typing import Sequence, Union
 
 import pandas as pd
 import numpy as np
 
 from . import utils
+
+logger = utils.make_logger('pytrthree')
+
+TRTHFile = Union[str, io.TextIOWrapper]
 
 
 class TRTHIterator:
@@ -13,15 +18,35 @@ class TRTHIterator:
     and yield DataFrame grouped by RIC.
     """
     def __init__(self, files, chunksize=10 ** 6):
-        if isinstance(files, str):
-            self.files = [files]
-        if not isinstance(files, Sequence):
-            raise ValueError('Invalid input')
-        self.files = files
+        self.files = self._validate_input(files)
         self.chunksize = chunksize
 
     def __iter__(self):
         return self.make_next()
+
+    @staticmethod
+    def _validate_input(files: Union[TRTHFile, Sequence[TRTHFile]]) -> Sequence[TRTHFile]:
+        if isinstance(files, (str, io.TextIOWrapper)):
+            files = [files]
+        for f in files:
+            if not isinstance(f, (str, io.TextIOWrapper)):
+                raise ValueError(f'Invalid input: {f}')
+
+        output = []
+        for file in files:
+            fname = file.name if isinstance(file, io.TextIOWrapper) else file
+            try:
+                _, ftype = utils.parse_rid_type(fname)
+            except (IndexError, ValueError):
+                logger.warning(f'Ignoring {fname}')
+                continue
+            if ftype in {'confirmation', 'report'}:
+                logger.debug(f'Ignoring {fname}')
+                continue
+            else:
+                output.append(file)
+
+        return sorted(output)
 
     def make_next(self):
         for file in self.files:
