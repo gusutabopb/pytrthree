@@ -2,8 +2,9 @@ import io
 import re
 from typing import Sequence, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytz
 
 from . import utils
 
@@ -49,7 +50,7 @@ class TRTHIterator:
             try:
                 _, ftype = utils.parse_rid_type(fname)
             except (IndexError, ValueError):
-                logger.warning(f'Ignoring {fname}')
+                logger.debug(f'Ignoring {fname}')
                 continue
             if ftype in {'confirmation', 'report'}:
                 logger.debug(f'Ignoring {fname}')
@@ -63,13 +64,17 @@ class TRTHIterator:
         """Iterates over input files and generates single-RIC DataFrames"""
         for file in self.files:
             logger.info(file)
+            lastrow = None
             chunks = pd.read_csv(file, iterator=True, chunksize=self.chunksize)
             for chunk in chunks:
                 for _, df in chunk.groupby('#RIC'):
-                    yield self.pre_process(df.copy())
+                    processed_df = self.pre_process(df.copy(), lastrow)
+                    yield processed_df
+                    lastrow = None
+                lastrow = processed_df.iloc[-1]
 
     @staticmethod
-    def pre_process(df) -> pd.DataFrame:
+    def pre_process(df, lastrow=None) -> pd.DataFrame:
         """Generates a unique DateTimeIndex and drops datetime-related columns"""
         def find_columns(df, pattern):
             try:
@@ -79,20 +84,35 @@ class TRTHIterator:
 
         # Remove characters that cause problems in MongoDB/Pandas (itertuples)
         df.columns = [re.sub('\.|-|#', '', col) for col in df.columns]
+
+        # Make DateTimexIndex
         date_col = find_columns(df, 'Date')
         time_col = find_columns(df, 'Time')
         gmt_col = find_columns(df, 'GMT')
         if time_col:
             df.index = pd.to_datetime(df[date_col].astype(str) + ' ' + df[time_col])
             df.drop([date_col, time_col], axis=1, inplace=True)
-            if gmt_col:
-                df.index = df.index + pd.Timedelta(hours=9)
-                df.drop(gmt_col, axis=1, inplace=True)
         else:
             df.index = pd.to_datetime(df[date_col].astype(str))
             df.drop(date_col, axis=1)
 
         # Add 10 ns to repeated timestamps to make timeseries index unique.
         offset = pd.DataFrame(df.index).groupby(0).cumcount() * np.timedelta64(10, 'ns')
-        df.index = df.index + offset.values
+        df.index += offset.values
+
+        # Make DateTimeIndex timezone-aware
+        if gmt_col:
+            assert len(df[gmt_col].value_counts()) == 1
+            df.index = df.index + pd.Timedelta(hours=df.ix[0, gmt_col])
+            df.index = df.index.tz_localize(pytz.FixedOffset(9 * 60))
+            df.drop(gmt_col, axis=1, inplace=True)
+        else:
+            df.index = df.index.tz_localize(pytz.timezone('utc'))
+
+        # Make sure rows separated by chunks have different timestamps
+        if lastrow is not None:
+            if lastrow['RIC'] == df.ix[0, 'RIC'] and lastrow.name == df.index[0]:
+                logger.info('Adjusting first row timestamp')
+                df.index.values[0] += np.timedelta64(5, 'ns')
+
         return df
