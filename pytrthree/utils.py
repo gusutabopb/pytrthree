@@ -14,12 +14,14 @@ from zeep.xsd.valueobjects import CompoundValue
 logger = logging.getLogger('pytrthree')
 
 
-def make_logger(name, config) -> logging.Logger:
-    log_path = os.path.expanduser(config['log'])
+def make_logger(name, config=None) -> logging.Logger:
+    log_path = os.path.expanduser(config['log']) if config else os.getcwd()
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     fname = os.path.join(log_path, f'{name}.log')
     logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(fmt='{asctime} | {name} | {levelname}: {message}',
                                   datefmt='%Y-%m-%d %H:%M:%S', style='{')
