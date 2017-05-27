@@ -13,5 +13,6 @@ def api(request):
     print(f'Config file: {config}')
     api = TRTH(config=config)
     api.debug = True
+    api.options['raise_exception'] = True
     assert api.debug
     yield api
