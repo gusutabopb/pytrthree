@@ -63,13 +63,14 @@ class TRTHIterator:
     def make_next(self):
         """Iterates over input files and generates single-RIC DataFrames"""
         for file in self.files:
-            logger.info(file)
             lastrow = None
             chunks = pd.read_csv(file, iterator=True, chunksize=self.chunksize)
-            for chunk in chunks:
-                for _, df in chunk.groupby('#RIC'):
+            for i, chunk in enumerate(chunks):
+                fname = file.name if isinstance(file, io.TextIOWrapper) else file
+                logger.info('{} chunk #{}'.format(fname.split('/')[-1], i+1))
+                for ric, df in chunk.groupby('#RIC'):
                     processed_df = self.pre_process(df.copy(), lastrow)
-                    yield processed_df
+                    yield (ric, processed_df)
                     lastrow = None
                 lastrow = processed_df.iloc[-1]
 
@@ -112,7 +113,7 @@ class TRTHIterator:
         # Make sure rows separated by chunks have different timestamps
         if lastrow is not None:
             if lastrow['RIC'] == df.ix[0, 'RIC'] and lastrow.name == df.index[0]:
-                logger.info('Adjusting first row timestamp')
+                logger.debug(f'Adjusting first row timestamp: {df.ix[0, "RIC"]}')
                 df.index.values[0] += np.timedelta64(5, 'ns')
 
         return df
