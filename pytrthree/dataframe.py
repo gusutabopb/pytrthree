@@ -97,8 +97,8 @@ class TRTHIterator:
             df.index = pd.to_datetime(df[date_col].astype(str))
             df.drop(date_col, axis=1)
 
-        # Add 10 ns to repeated timestamps to make timeseries index unique.
-        offset = pd.DataFrame(df.index).groupby(0).cumcount() * np.timedelta64(10, 'ns')
+        # Add small offset to repeated timestamps to make timeseries index unique.
+        offset = pd.DataFrame(df.index).groupby(0).cumcount() * np.timedelta64(1, 'us')
         df.index += offset.values
 
         # Make DateTimeIndex timezone-aware
@@ -114,6 +114,6 @@ class TRTHIterator:
         if lastrow is not None:
             if lastrow['RIC'] == df.ix[0, 'RIC'] and lastrow.name == df.index[0]:
                 logger.debug(f'Adjusting first row timestamp: {df.ix[0, "RIC"]}')
-                df.index.values[0] += np.timedelta64(5, 'ns')
+                df.index.values[0] += np.timedelta64(1, 'us')
 
         return df
