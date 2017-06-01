@@ -175,6 +175,7 @@ def retry(func, *args, n=sys.maxsize, sleep=3, exp_base=1, exception_cls=Fault, 
             try:
                 return func(*args, **kwargs)
             except exception_cls as e:
+                logger.error(e)
                 retry_processing(trial, e, args, kwargs)
         return wrapper
 

@@ -26,10 +26,9 @@ class TRTH:
         self.plugin = DebugPlugin(self)
         self.client = Client(self.TRTH_WSDL_URL, strict=True, plugins=[self.plugin])
         self.factory = self.client.type_factory('ns0')
-        self.header = self.make_credentials()
         self.signatures = self._parse_signatures()
         self._make_docstring()
-        self.client.set_default_soapheaders(self.header)
+        self.client.set_default_soapheaders(self._make_header())
         self.logger.info('TRTH API initialized.')
 
     def __getattr__(self, item):
@@ -75,7 +74,7 @@ class TRTH:
                 new_obj.signature, new_obj.__doc__ = formatter(func)
                 setattr(self, attr, new_obj)
 
-    def make_credentials(self):
+    def _make_header(self):
         """
         Does initial authentication with the TRTH API
         and generates unique token used in subsequent API requests.

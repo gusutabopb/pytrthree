@@ -85,6 +85,7 @@ class TRTHIterator:
 
         # Remove characters that cause problems in MongoDB/Pandas (itertuples)
         df.columns = [re.sub('\.|-|#', '', col) for col in df.columns]
+        df = df.dropna(axis=1, how='all')
 
         # Make DateTimexIndex
         date_col = find_columns(df, 'Date')
@@ -95,7 +96,8 @@ class TRTHIterator:
             df.drop([date_col, time_col], axis=1, inplace=True)
         else:
             df.index = pd.to_datetime(df[date_col].astype(str))
-            df.drop(date_col, axis=1)
+            df.drop(date_col, axis=1, inplace=True)
+            return df
 
         # Add small offset to repeated timestamps to make timeseries index unique.
         offset = pd.DataFrame(df.index).groupby(0).cumcount() * np.timedelta64(1, 'us')
