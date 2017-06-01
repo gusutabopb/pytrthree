@@ -93,10 +93,10 @@ class TRTHIterator:
         gmt_col = find_columns(df, 'GMT')
         if time_col:
             df.index = pd.to_datetime(df[date_col].astype(str) + ' ' + df[time_col])
-            df.drop([date_col, time_col], axis=1, inplace=True)
+            df = df.drop([date_col, time_col], axis=1)
         else:
             df.index = pd.to_datetime(df[date_col].astype(str))
-            df.drop(date_col, axis=1, inplace=True)
+            df = df.drop(date_col, axis=1)
             return df
 
         # Add small offset to repeated timestamps to make timeseries index unique.
