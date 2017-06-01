@@ -12,7 +12,7 @@ def main(args):
     for ric, df in TRTHIterator(files):
         cols = args.columns if args.columns else df.columns
         try:
-            db.write(ric, df[cols])
+            db.write(ric, df[cols], collection=args.collection)
         except ValidationError as e:
             db.logger.error(e)
 
@@ -25,5 +25,7 @@ if __name__ == '__main__':
                         help='Glob of files to download')
     parser.add_argument('--columns', nargs='*', type=str,
                         help='Columns to be inserted (optional)')
+    parser.add_argument('--collection', type=str, default=None,
+                        help='Collection to insert to (optional)')
     args = parser.parse_args()
     main(args)
