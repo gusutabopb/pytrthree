@@ -1,0 +1,36 @@
+---
+friendlyName: tas_eod_template
+requestType: EndOfDay
+instrumentList:
+  instrument:
+    - code: 5401.T
+dateRange:
+  start: '2015-01-01'
+  end:   '2015-02-28'
+timeRange:
+  start: '00:00'
+  end:   '23:59:59.999'
+messageTypeList:
+  messageType:
+    - name: End Of Day
+      fieldList:
+        string:
+          - Open
+          - High
+          - Low
+          - Last
+          - Volume
+          - VWAP
+          - Turnover
+requestInGMT: true
+displayInGMT: true
+marketDepth: null
+dateFormat: YYYYMMDD
+disableDataPersistence: false
+includeCurrentRIC: false
+applyCorrections: false
+displayMicroseconds: true
+splitSize: 500
+delivery: Push
+sortType: RICSequence
+fileFormat: Single
